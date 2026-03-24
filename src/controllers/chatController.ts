@@ -1,5 +1,6 @@
 import { OpenRouter } from "@openrouter/sdk";
 import { sql } from "bun";
+import { aiRouter } from "../services/roundRobin";
 
 const openrouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY
@@ -58,31 +59,25 @@ export async function chatHandler(req: Request): Promise<Response> {
       }
     }
 
-    const stream = await openrouter.chat.send({
-      chatGenerationParams: {
-        model: "openrouter/free",
-        stream: true,
-        messages: messages,
-      }
-    } as any);
+    let provider;
+    try {
+      provider = aiRouter.getNextProvider();
+      console.log(`[AI SERVICE] Routing to provider: ${provider.name}`);
+    } catch(err: any) {
+      return Response.json({ error: err.message }, { status: 500 });
+    }
 
+    const streamGenerator = provider.chatStream(messages);
     const encoder = new TextEncoder();
     let fullResponse = "";
 
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of stream as any) {
-            const content = chunk.choices[0]?.delta?.content;
-            if (content) {
-              fullResponse += content;
-              controller.enqueue(encoder.encode(content));
-              process.stdout.write(content);
-            }
-            if (chunk.usage) {
-              const reasoningTokens = (chunk.usage as any).reasoningTokens;
-              console.log("\\nReasoning tokens:", reasoningTokens);
-            }
+          for await (const chunk of streamGenerator) {
+            fullResponse += chunk;
+            controller.enqueue(encoder.encode(chunk));
+            process.stdout.write(chunk);
           }
           console.log(); // Add newline after stream ends
           
