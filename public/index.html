@@ -196,22 +196,109 @@
       <div class="message ai">¡Hola! Envíame un mensaje y verás cómo reacciono en tiempo real (streaming).</div>
     </div>
 
-    <form id="chat-form">
-      <input type="text" id="prompt" placeholder="Habla con la IA..." autocomplete="off" required>
-      <button type="submit" id="submit-btn">Enviar</button>
+    <form id="chat-form" style="display: flex; flex-wrap: wrap; gap: 0.75rem; position: sticky; bottom: 1rem; background: var(--glass); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+      <input type="text" id="chat-user" placeholder="Tu usuario" value="ana" required style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: var(--bg); color: var(--text); min-width: 150px;">
+      <input type="email" id="chat-email" placeholder="Tu email" value="ana@mail.com" required style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: var(--bg); color: var(--text); min-width: 150px;">
+      <input type="text" id="prompt" placeholder="Habla con la IA..." autocomplete="off" required style="flex: 1 1 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background: var(--bg); color: var(--text);">
+      <button type="submit" id="submit-btn" style="flex: 1 1 100%;">Enviar Consulta a la IA</button>
     </form>
+
+    <div class="chat-box" style="min-height: auto; max-height: none; overflow: visible; padding: 1.5rem; margin-top: 1rem; background: #1a1b26; color: #a9b1d6; border-color: #24283b;">
+      <h2 style="margin-top: 0; font-size: 1.2rem; color: #fff;">REST rápido</h2>
+      <p style="font-size: 0.9rem; color: #7aa2f7; margin-bottom: 1.5rem;">Ejecuta cualquier endpoint REST y visualiza el resultado.</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+          <label style="display: block; font-size: 0.85rem; margin-bottom: 0.3rem;">Metodo</label>
+          <select id="rest-method" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid #414868; background: #24283b; color: #fff; font-size: 0.9rem;">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.85rem; margin-bottom: 0.3rem;">Ruta</label>
+          <input type="text" id="rest-route" value="/api/users" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid #414868; background: #0f111a; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.85rem; margin-bottom: 0.3rem;">Body JSON (opcional para GET/DELETE)</label>
+          <textarea id="rest-body" rows="4" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid #414868; background: #0f111a; color: #fff; font-family: monospace; font-size: 0.9rem; box-sizing: border-box;">{"username":"ana","email":"ana@mail.com"}</textarea>
+        </div>
+        <button id="rest-execute" style="width: 100%; background: #60a5fa; color: #000; padding: 0.8rem; font-weight: bold; font-size: 1rem; border-radius: 8px;">Ejecutar request</button>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 0.5rem; flex-wrap: wrap;">
+        <button class="rest-shortcut" data-method="GET" data-route="/api/users" data-body="" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; background: #24283b; color: #c0caf5; white-space: nowrap; border: 1px solid #414868; border-radius: 6px; cursor: pointer;">GET /api/users</button>
+        <button class="rest-shortcut" data-method="POST" data-route="/api/users" data-body='{"username":"ana","email":"ana@mail.com"}' style="padding: 0.5rem 0.8rem; font-size: 0.85rem; background: #24283b; color: #c0caf5; white-space: nowrap; border: 1px solid #414868; border-radius: 6px; cursor: pointer;">POST /api/users</button>
+        <button class="rest-shortcut" data-method="GET" data-route="/api/conversations" data-body="" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; background: #24283b; color: #c0caf5; white-space: nowrap; border: 1px solid #414868; border-radius: 6px; cursor: pointer;">GET /api/conversations</button>
+        <button class="rest-shortcut" data-method="POST" data-route="/api/conversations" data-body="" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; background: #24283b; color: #c0caf5; white-space: nowrap; border: 1px solid #414868; border-radius: 6px; cursor: pointer;">POST /api/conversations</button>
+        <button class="rest-shortcut" data-method="GET" data-route="/api/messages/1" data-body="" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; background: #24283b; color: #c0caf5; white-space: nowrap; border: 1px solid #414868; border-radius: 6px; cursor: pointer;">GET /api/messages/:id</button>
+      </div>
+
+      <pre id="rest-result" style="background: #0f111a; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.9rem; margin: 0; color: #9ece6a; min-height: 80px;">Esperando request REST...</pre>
+    </div>
   </div>
 
   <script>
+    const methodEl = document.getElementById('rest-method');
+    const routeEl = document.getElementById('rest-route');
+    const bodyEl = document.getElementById('rest-body');
+    const executeBtn = document.getElementById('rest-execute');
+    const resultEl = document.getElementById('rest-result');
+
+    document.querySelectorAll('.rest-shortcut').forEach(btn => {
+      btn.addEventListener('click', () => {
+        methodEl.value = btn.dataset.method;
+        routeEl.value = btn.dataset.route;
+        bodyEl.value = btn.dataset.body;
+        executeBtn.click();
+      });
+    });
+
+    executeBtn.addEventListener('click', async () => {
+      resultEl.textContent = 'Loading...';
+      try {
+        const method = methodEl.value;
+        const options = { method, headers: {} };
+        const bodyStr = bodyEl.value.trim();
+        
+        if (bodyStr && method !== 'GET' && method !== 'DELETE') {
+          options.headers['Content-Type'] = 'application/json';
+          JSON.parse(bodyStr);
+          options.body = bodyStr;
+        }
+
+        const res = await fetch(routeEl.value, options);
+        if (res.status === 204) {
+          resultEl.textContent = `Status: 204 No Content\\n(Success)`;
+          return;
+        }
+        const text = await res.text();
+        try {
+          const json = JSON.parse(text);
+          resultEl.textContent = `Status: ${res.status}\\n\\n` + JSON.stringify(json, null, 2);
+        } catch(e) {
+          resultEl.textContent = `Status: ${res.status}\\n\\n` + text;
+        }
+      } catch(err) {
+        resultEl.textContent = 'Error: ' + err.message + (err instanceof SyntaxError ? '\\n(Verifica que el Body JSON sea válido)' : '');
+      }
+    });
+
     const form = document.getElementById('chat-form');
     const input = document.getElementById('prompt');
+    const userInp = document.getElementById('chat-user');
+    const emailInp = document.getElementById('chat-email');
     const chatContainer = document.getElementById('chat');
     const btn = document.getElementById('submit-btn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = input.value.trim();
-      if (!text) return;
+      const username = userInp.value.trim();
+      const email = emailInp.value.trim();
+      if (!text || !username || !email) return;
 
       // Add User Message
       appendMessage(text, 'user');
@@ -229,7 +316,10 @@
         const response = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [{ role: 'user', content: text }] })
+          body: JSON.stringify({ 
+            messages: [{ role: 'user', content: text }],
+            user: { username, email }
+          })
         });
 
         aiMessageEl.innerHTML = '';
